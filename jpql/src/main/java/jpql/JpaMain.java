@@ -222,6 +222,44 @@ public class JpaMain {
                 .getResultList();
     }
 
+    /*
+     * JPQL 타입 표현과 기타식
+     */
+    static void typeExpression(EntityManager em) {
+        Member member = new Member();
+        member.setAge(10);
+        member.setUsername("member1");
+        member.setType(MemberType.ADMIN);
+        em.persist(member);
+
+        em.flush();
+        em.clear();
+        
+        // 파라미터 바인딩 없이 jpql
+        String queryWithoutParam = "select m.username, 'HELLO', true from Member m "
+                      + "where m.type = jpql.MemberType.ADMIN";
+        // 파라미터 바인딩 활용한 jpql
+        String queryWitParam = "select m.username, 'HELLO', true from Member m "
+                      + "where m.type = :userType";
+                      
+        List<Object[]> resultWithoutParam = em.createQuery(queryWithoutParam)
+                .getResultList();
+        List<Object[]> resultWithParam = em.createQuery(queryWitParam)
+                .setParameter("userType", MemberType.ADMIN)
+                .getResultList();
+
+        for (Object[] objects : resultWithoutParam) {
+            System.out.println("objects = " + objects[0]);
+            System.out.println("objects = " + objects[1]);
+            System.out.println("objects = " + objects[2]);
+        }
+        for (Object[] objects : resultWithParam) {
+            System.out.println("objects = " + objects[0]);
+            System.out.println("objects = " + objects[1]);
+            System.out.println("objects = " + objects[2]);
+        }
+    }
+
     
     public static void main(String[] args) {
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("hello");
@@ -243,8 +281,8 @@ public class JpaMain {
             // projection5(em);
 
             // paging1(em);
-
-            join1(em);
+            // join1(em);
+            typeExpression(em);
 
             tx.commit();
         } catch (Exception e) {
