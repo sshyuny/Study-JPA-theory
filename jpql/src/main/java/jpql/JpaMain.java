@@ -260,6 +260,37 @@ public class JpaMain {
         }
     }
 
+    /* 
+     * 조건식(CASE 등등) - case
+     */
+    static void useCaseSql(EntityManager em) {
+        Member member = new Member();
+        member.setAge(10);
+        member.setUsername("관리자");
+        member.setType(MemberType.ADMIN);
+        em.persist(member);
+
+        em.flush();
+        em.clear();
+
+        String queryForCase = 
+                "select " + 
+                "    case when m.age <= 10 then '학생요금' " +
+                "         when m.age >= 60 then '경로요금' " +
+                "         else '일반요금' " +
+                "end " +  
+                "from Member m";
+        String queryForCoalesce = "select coalesce(m.username, '이름 없는 회원') from Member m";
+        String queryForNullif = "select nullif(m.username, '관리자') from Member m";
+
+        List<String> result = em.createQuery(queryForNullif, String.class)
+                .getResultList();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
+
     
     public static void main(String[] args) {
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("hello");
@@ -282,7 +313,7 @@ public class JpaMain {
 
             // paging1(em);
             // join1(em);
-            typeExpression(em);
+            useCaseSql(em);
 
             tx.commit();
         } catch (Exception e) {
