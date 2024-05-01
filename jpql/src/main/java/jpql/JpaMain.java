@@ -261,7 +261,7 @@ public class JpaMain {
     }
 
     /* 
-     * 조건식(CASE 등등) - case
+     * 조건식(CASE 등등) - case, coalesce, nullif
      */
     static void useCaseSql(EntityManager em) {
         Member member = new Member();
@@ -291,6 +291,30 @@ public class JpaMain {
         }
     }
 
+    /*
+     * JPQL 함수
+     */
+    static void jpqlFunction(EntityManager em) {
+        Member member = new Member();
+        member.setAge(10);
+        member.setUsername("관리자");
+        member.setType(MemberType.ADMIN);
+        em.persist(member);
+
+        em.flush();
+        em.clear();
+
+        String queryForLocate = "select locate('de', 'abcdefg') from Member m";
+        String queryForSize = "select size(t.members) from Team t";
+
+        List<Integer> result = em.createQuery(queryForSize, Integer.class)
+                .getResultList();
+
+        for (Integer s : result) {
+            System.out.println("s = " + s);
+        }
+    }
+
     
     public static void main(String[] args) {
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("hello");
@@ -313,7 +337,8 @@ public class JpaMain {
 
             // paging1(em);
             // join1(em);
-            useCaseSql(em);
+            // useCaseSql(em);
+            jpqlFunction(em);
 
             tx.commit();
         } catch (Exception e) {
