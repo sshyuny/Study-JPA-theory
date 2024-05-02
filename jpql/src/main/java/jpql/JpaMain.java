@@ -1,6 +1,7 @@
 package jpql;
 
 import java.util.List;
+import java.util.Collection;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -315,6 +316,38 @@ public class JpaMain {
         }
     }
 
+    /*
+     * 경로 표현식
+     */
+    static void pathExpression(EntityManager em) {
+        Team team = new Team();
+        em.persist(team);
+
+        Member member = new Member();
+        member.setTeam(team);
+        member.setUsername("관리자");
+        em.persist(member);
+
+        em.flush();
+        em.clear();
+
+        String queryForSomeToOne = "select m.team.name from Member m";  // 묵시적 내부조인(내부조인 발생됨!) & m.team.name 가능
+        String queryForSomeToMany = "select t.members from Team t";
+                // t.members는 컬렉션을 가르키기 때문에 t.members.username 불가능! t.members.size는 가능(컬렉션에 size 사용 가능하기때문) 
+        String queryForSomeToManyWithAlias = "select m.username from Team t join t.members m";
+                // 명시적 조인으로 얻은 별칭을 통한 탐색 가능!
+
+        List<String> resultForSomeToOne = em.createQuery(queryForSomeToOne, String.class)
+                .getResultList();
+        List<Collection> resultForSomeToMany = em.createQuery(queryForSomeToMany, Collection.class)
+                .getResultList();
+        List<String> resultForSomeToManyWithAlias = em.createQuery(queryForSomeToManyWithAlias, String.class)
+                .getResultList();
+        
+        System.out.println("result = " + resultForSomeToMany);
+        System.out.println("result = " + resultForSomeToManyWithAlias.get(0));
+    }
+
     
     public static void main(String[] args) {
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("hello");
@@ -338,7 +371,8 @@ public class JpaMain {
             // paging1(em);
             // join1(em);
             // useCaseSql(em);
-            jpqlFunction(em);
+            // jpqlFunction(em);
+            pathExpression(em);
 
             tx.commit();
         } catch (Exception e) {
