@@ -348,6 +348,183 @@ public class JpaMain {
         System.out.println("result = " + resultForSomeToManyWithAlias.get(0));
     }
 
+    /*
+     * 페치 조인1 - 기본
+     * 페치조인을 사용하지 않았을 때의 문제점
+     */
+    static void fetchJoin1WithoutFetch(EntityManager em) {
+        Team teamA = new Team();
+        teamA.setName("팀A");
+        em.persist(teamA);
+        Team teamB = new Team();
+        teamB.setName("팀B");
+        em.persist(teamB);
+        Member member1 = new Member();
+        member1.setUsername("회원1");
+        member1.setTeam(teamA);
+        em.persist(member1);
+        Member member2 = new Member();
+        member2.setUsername("회원2");
+        member2.setTeam(teamA);
+        em.persist(member2);
+        Member member3 = new Member();
+        member3.setUsername("회원3");
+        member3.setTeam(teamB);
+        em.persist(member3);
+
+        em.flush();
+        em.clear();
+
+        String query = "select m from Member m ";
+
+        List<Member> result = em.createQuery(query, Member.class)
+                .getResultList();
+        //이때 Member를 가져오는 쿼리가 한번 날라가고, 
+        
+        for (Member member : result) {
+            System.out.println("Memeber = " + member.getUsername() + ", " + member.getTeam().getName());
+            //지연로딩이 되어있기 때문에, member.getTeam().getName() 이 시점에 SQL 다시 날라감
+            //회원1 - 팀A(SQL로 가져옴)
+            //회원2 - 팀A(1차캐시에서 가져옴)
+            //회원3 - 팀B(SQL로 가져옴)
+        }
+
+        //쿼리 여러번 나가게 됨!
+        //만일 회원 100명의 팀이 모두 다르다면 쿼리는 101번 나가게된다.
+        //이를 N + 1이라고 부름.
+        //해결 방법: 패치조인! (즉시, 지연로딩 모두 해결 안됨)
+    }
+
+    /*
+     * 페치 조인1 - 기본
+     * 페치조인 적용
+     */
+    static void fetchJoin1WithFetch(EntityManager em) {
+        Team teamA = new Team();
+        teamA.setName("팀A");
+        em.persist(teamA);
+        Team teamB = new Team();
+        teamB.setName("팀B");
+        em.persist(teamB);
+        Member member1 = new Member();
+        member1.setUsername("회원1");
+        member1.setTeam(teamA);
+        em.persist(member1);
+        Member member2 = new Member();
+        member2.setUsername("회원2");
+        member2.setTeam(teamA);
+        em.persist(member2);
+        Member member3 = new Member();
+        member3.setUsername("회원3");
+        member3.setTeam(teamB);
+        em.persist(member3);
+
+        em.flush();
+        em.clear();
+
+        String query = "select m from Member m join fetch m.team";
+
+        List<Member> result = em.createQuery(query, Member.class)
+                .getResultList();
+        //여기서 join을 사용해서 team 데이터가 이미 담겼기 때문에
+        
+        for (Member member : result) {
+            System.out.println("Memeber = " + member.getUsername() + ", " + member.getTeam().getName());
+            // 이때 추가 쿼리 나갈 필요 없음
+        }
+    }
+
+    /*
+     * 페치 조인1 - 기본
+     * 컬렉션 페치 조인
+     */
+    static void fetchJoin1Collection(EntityManager em) {
+        Team teamA = new Team();
+        teamA.setName("팀A");
+        em.persist(teamA);
+        Team teamB = new Team();
+        teamB.setName("팀B");
+        em.persist(teamB);
+        Member member1 = new Member();
+        member1.setUsername("회원1");
+        member1.setTeam(teamA);
+        em.persist(member1);
+        Member member2 = new Member();
+        member2.setUsername("회원2");
+        member2.setTeam(teamA);
+        em.persist(member2);
+        Member member3 = new Member();
+        member3.setUsername("회원3");
+        member3.setTeam(teamB);
+        em.persist(member3);
+
+        em.flush();
+        em.clear();
+
+        String query = "select t from Team t join fetch t.members";
+
+        List<Team> result = em.createQuery(query, Team.class)
+                .getResultList();
+        
+        for (Team team : result) {
+            System.out.println("team = " + team.getName() + " | members = " + team.getMembers().size());
+            for (Member member : team.getMembers()) {
+                System.out.println("- member =" + member);
+            }
+        }
+    }
+
+    /*
+     * 페치 조인1 - 기본
+     * 컬렉션 페치 조인 비교
+     */
+    static void fetchJoin1Distinct(EntityManager em) {
+        Team teamA = new Team();
+        teamA.setName("팀A");
+        em.persist(teamA);
+        Team teamB = new Team();
+        teamB.setName("팀B");
+        em.persist(teamB);
+        Member member1 = new Member();
+        member1.setUsername("회원1");
+        member1.setTeam(teamA);
+        em.persist(member1);
+        Member member2 = new Member();
+        member2.setUsername("회원2");
+        member2.setTeam(teamA);
+        em.persist(member2);
+        Member member3 = new Member();
+        member3.setUsername("회원3");
+        member3.setTeam(teamB);
+        em.persist(member3);
+
+        em.flush();
+        em.clear();
+
+        String query = "select t from Team t";
+        String queryWithJoin = "select t from Team t join fetch t.members";
+        String queryWithDistinct = "select distinct t from Team t join fetch t.members";  //distinct 붙임!
+
+        List<Team> result = em.createQuery(query, Team.class)
+                .getResultList();
+        List<Team> resultWithJoin = em.createQuery(queryWithJoin, Team.class)
+                .getResultList();
+        List<Team> resultDistinct = em.createQuery(queryWithDistinct, Team.class)
+                .getResultList();
+        
+        System.out.println("result.size() = " + result.size());
+        System.out.println("resultWithJoin.size() = " + resultWithJoin.size());
+        System.out.println("resultDistinct.size() = " + resultDistinct.size());
+
+        //distinct 덕분에 팀A 한번만 조회된다
+        for (Team team : resultDistinct) {
+            System.out.println("team = " + team.getName() + " | members = " + team.getMembers().size());
+            for (Member member : team.getMembers()) {
+                System.out.println("- member =" + member);
+            }
+        }
+    }
+
     
     public static void main(String[] args) {
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("hello");
@@ -372,7 +549,12 @@ public class JpaMain {
             // join1(em);
             // useCaseSql(em);
             // jpqlFunction(em);
-            pathExpression(em);
+            // pathExpression(em);
+
+            // fetchJoin1WithoutFetch(em);
+            // fetchJoin1WithFetch(em);
+            // fetchJoin1Collection(em);
+            fetchJoin1Distinct(em);
 
             tx.commit();
         } catch (Exception e) {
