@@ -525,6 +525,88 @@ public class JpaMain {
         }
     }
 
+    /*
+     * 페치 조인2 - 한계
+     * 위험한 상황인 일대다 페치조인 페이징
+     */
+    static void fetchJoin2Danger(EntityManager em) {
+        Team teamA = new Team();
+        teamA.setName("팀A");
+        em.persist(teamA);
+        Team teamB = new Team();
+        teamB.setName("팀B");
+        em.persist(teamB);
+        Member member1 = new Member();
+        member1.setUsername("회원1");
+        member1.setTeam(teamA);
+        em.persist(member1);
+        Member member2 = new Member();
+        member2.setUsername("회원2");
+        member2.setTeam(teamA);
+        em.persist(member2);
+        Member member3 = new Member();
+        member3.setUsername("회원3");
+        member3.setTeam(teamB);
+        em.persist(member3);
+
+        em.flush();
+        em.clear();
+
+        // 일대다 컬렉션 페치조인에서 페이징 처리를 하기 때문에 위험하다!
+        String queryDanger = "select t from Team t join fetch t.members m";
+        List<Team> resultDanger = em.createQuery(queryDanger, Team.class)
+                .setFirstResult(0)
+                .setMaxResults(1)
+                .getResultList();
+    }
+
+    /*
+     * 페치 조인2 - 한계
+     * 위험한 상황인 일대다 페치조인 페이징
+     */
+    static void fetchJoin2DangerAlter(EntityManager em) {
+        Team teamA = new Team();
+        teamA.setName("팀A");
+        em.persist(teamA);
+        Team teamB = new Team();
+        teamB.setName("팀B");
+        em.persist(teamB);
+        Member member1 = new Member();
+        member1.setUsername("회원1");
+        member1.setTeam(teamA);
+        em.persist(member1);
+        Member member2 = new Member();
+        member2.setUsername("회원2");
+        member2.setTeam(teamA);
+        em.persist(member2);
+        Member member3 = new Member();
+        member3.setUsername("회원3");
+        member3.setTeam(teamB);
+        em.persist(member3);
+
+        em.flush();
+        em.clear();
+
+
+        // 대안 1: 다대일이 되도록 쿼리를 바꿔서 안전하게 조회할 수 있다.
+        String querySafe1 = "select m from Member m join fetch m.team t";
+
+        // 대안 2.
+        String querySafe2 = "select t from Team t";
+        List<Team> resultSafe2 = em.createQuery(querySafe2, Team.class)
+                .setFirstResult(0)
+                .setMaxResults(2)
+                .getResultList();
+        //LAZY 설정으로, 각 team마다 매번 select 쿼리 나간다는 성능 문제 있음
+        for (Team team : resultSafe2) {
+            System.out.println("team = " + team.getName() + " | members = " + team.getMembers().size());
+            for (Member member : team.getMembers()) {
+                System.out.println("- member =" + member);
+            }
+        }
+
+    }
+
     
     public static void main(String[] args) {
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("hello");
@@ -554,7 +636,9 @@ public class JpaMain {
             // fetchJoin1WithoutFetch(em);
             // fetchJoin1WithFetch(em);
             // fetchJoin1Collection(em);
-            fetchJoin1Distinct(em);
+            // fetchJoin1Distinct(em);
+            // fetchJoin2Danger(em);
+            fetchJoin2DangerAlter(em);
 
             tx.commit();
         } catch (Exception e) {
