@@ -607,6 +607,9 @@ public class JpaMain {
 
     }
 
+    /*
+     * 네임드 쿼리
+     */
     static void namedQuery1(EntityManager em) {
         Team teamA = new Team();
         teamA.setName("팀A");
@@ -637,6 +640,46 @@ public class JpaMain {
         for (Member member : resultList) {
             System.out.println("member = " + member);
         }
+    }
+
+    /*
+     * 벌크 연산
+     */
+    static void bulk(EntityManager em) {
+        Team teamA = new Team();
+        teamA.setName("팀A");
+        em.persist(teamA);
+        Team teamB = new Team();
+        teamB.setName("팀B");
+        em.persist(teamB);
+        Member member1 = new Member();
+        member1.setUsername("회원1");
+        member1.setTeam(teamA);
+        em.persist(member1);
+        Member member2 = new Member();
+        member2.setUsername("회원2");
+        member2.setTeam(teamA);
+        em.persist(member2);
+        Member member3 = new Member();
+        member3.setUsername("회원3");
+        member3.setTeam(teamB);
+        em.persist(member3);
+
+        // em.flush();  플러시 자동 호출된다!
+        // em.clear();
+
+        int resultCount = em.createQuery("update Member m set m.age = 20")
+                .executeUpdate();
+
+        System.out.println("resultCount = " + resultCount);
+
+        // 하지만 영속성 컨텍스트에는 DB내용이 반영되어있지 않기 때문에
+        // 영속성 컨텍스트 초기화 없이 값을 가져올 경우 데이터 정합성이 깨진다!
+        Member findMember = em.find(Member.class, member1.getId());
+        System.out.println("findMember.getAge() = " + findMember.getAge());  // 업데이트 전값인 0이 나옴
+
+        // 영속성 컨텍스트 초기화를 꼭 해주자!
+        em.clear();
     }
 
     
@@ -672,7 +715,8 @@ public class JpaMain {
             // fetchJoin2Danger(em);
             // fetchJoin2DangerAlter(em);
 
-            namedQuery1(em);
+            // namedQuery1(em);
+            bulk(em);
 
             tx.commit();
         } catch (Exception e) {
